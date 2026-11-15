@@ -109,7 +109,7 @@ function analyse(key: string, items: Occurrence[], asOf: string): RecurringCandi
     : /housing|rent/i.test(category) ? 'rent'
     : /fitness/i.test(category) ? 'membership'
     : /tax/i.test(category) ? 'tax'
-    : fixed ? 'subscription' : 'other';
+    : fixed && (!category || /subscription|entertainment|education/i.test(category)) ? 'subscription' : 'other';
   const recent = sorted.slice(-3);
   const typical = fixed ? Math.abs(last.amount_minor) : Math.round(median(recent.map((r) => Math.abs(r.amount_minor))));
   const typicalBase = fixed
@@ -162,7 +162,8 @@ export function detectRecurring(db: DB, asOf: string = today()): RecurringCandid
     const byAmount = new Map<number, Occurrence[]>();
     for (const it of items) (byAmount.get(it.amount_minor) ?? byAmount.set(it.amount_minor, []).get(it.amount_minor)!).push(it);
     for (const [amount, sub] of byAmount) {
-      if (sub.length === items.length) continue;
+      // Two equal purchases months apart are a coincidence, not a plan.
+      if (sub.length === items.length || sub.length < 3) continue;
       const c = analyse(`${key} ${Math.abs(amount) / 100}`, sub, asOf);
       if (c) out.push(c);
     }

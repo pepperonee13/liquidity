@@ -1,0 +1,15 @@
+services:
+  liquidity:
+    build: .
+    restart: unless-stopped
+    ports:
+      # Bound to this machine only. Put a TLS reverse proxy in front before exposing it further.
+      - "127.0.0.1:3000:3000"
+    env_file: .env
+    volumes:
+      - liquidity-data:/data
+      # The Enable Banking private key, read-only (see docs/BANK_SYNC.md)
+      - ./secrets:/secrets:ro
+
+volumes:
+  liquidity-data:

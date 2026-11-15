@@ -335,15 +335,16 @@ export function savingsOpportunities(db: DB): { base_currency: string; generated
   for (const c of trends) {
     const baseline = complete.slice(0, 3).reduce((s, m) => s + (c.by_month[m] ?? 0), 0) / 3;
     const last = c.by_month[latest] ?? 0;
-    if (baseline > 0 && last > baseline * 1.25 && last - baseline > Math.max(avgExpenses * 0.01, 1)) {
-      out.push({
-        type: 'category_spike',
-        title: `${c.category} spending is up ${Math.round((last / baseline - 1) * 100)}%`,
-        detail: `${money(last)} in ${latest} versus a ${money(baseline)} average over the three months before.`,
-        estimated_yearly_saving: c.essential ? null : Math.round((last - baseline) * 12),
-        related: { category_id: c.category_id, month: latest, baseline_monthly: Math.round(baseline), latest_monthly: last },
-      });
-    }
+    // Ignore categories that are normally tiny: one purchase there is not a trend.
+    if (baseline < avgExpenses * 0.01 || last <= baseline * 1.25) continue;
+    out.push({
+      type: 'category_spike',
+      title: `${c.category} spending is up ${Math.round((last / baseline - 1) * 100)}%`,
+      detail: `${money(last)} in ${latest} versus a ${money(baseline)} average over the three months before.`,
+      // One hot month does not project to a year; this is a prompt to look, not a saving.
+      estimated_yearly_saving: null,
+      related: { category_id: c.category_id, month: latest, baseline_monthly: Math.round(baseline), latest_monthly: last },
+    });
   }
 
   // 2. Budgets that are blown or on course to be.
